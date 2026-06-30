@@ -1,184 +1,174 @@
-# Local Enterprise Ingress Infrastructure (Cloudflare Tunnels)
+# Local Enterprise Ingress Infrastructure (Cloudflare Tunnel)
 
-This repository tracks the configuration, deployment, and routing logic for a production-grade local ingress layer on Fedora Linux. The architecture securely exposes localized data engines, IDE workspaces, and MLOps platforms to the internet using Cloudflare Zero Trust Edge Tunnels (`cloudflared`), eliminating the need for risky inbound firewall rules or public port forwarding.
+This repository documents a private ingress architecture for a self-hosted AI and data platform running on Fedora Linux. The goal is to provide secure access to development and AI services without exposing inbound ports to the public Internet.
+
+This setup applies security principles commonly used in enterprise environments, including encrypted communication, least-privilege access, secure routing, and private connectivity.
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
-The ingress layer establishes a persistent outbound proxy connection to Cloudflare’s global edge network:
-
-```
-  ┌────────────────────────────────────────────────────────┐
-  │                  Your Fedora Laptop                    │
-  │                                                        │
-  │  ┌──────────────┐   ┌─────────────────┐   ┌─────────┐  │
-  │  │ Coder (3000) │   │  MinIO (9001)   │   │ MLflow  │  │
-  │  └──────▲───────┘   └────────▲────────┘   │ (5000)  │  │
-  │         │                    │            └────▲────┘  │
-  │         └──────────┐         │                 │       │
-  │                    │         │                 │       │
-  │              ┌─────┴─────────┴─────────────────┴──┐    │
-  │              │    cloudflared systemd service    │    │
-  │              └─────────────────▲──────────────────┘    │
-  │                                │ (Outbound TLS)        │
-  └────────────────────────────────┼───────────────────────┘
-                                   │
-                     ┌─────────────┴─────────────┐
-                     │   Cloudflare Edge Network │
-                     │    (*.explae.com Zone)    │
-                     └───────────────────────────┘
+```text
+                Internet
+                    │
+                    ▼
+             Cloudflare DNS
+                    │
+                    ▼
+         Cloudflare Tunnel (TLS)
+                    │
+                    ▼
+         Fedora Infrastructure Server
+        ┌──────────────────────────────┐
+        │ Coder                        │
+        │ MinIO                        │
+        │ MLflow                       │
+        │ PostgreSQL                   │
+        └──────────────────────────────┘
 ```
 
-* **Zero-Inbound Security:** Blocks all scanner and malicious brute-force attempts by keeping your home network ports hidden.
-* **Edge Routing Engine:** Inspects request subdomains at Cloudflare's perimeter and proxies them safely down to your local Fedora ports over encrypted TLS streams.
-* **Protocol Flexing:** Seamlessly handles web-native application wrappers (HTTP/HTTPS) alongside raw developer data pipeline layers (PostgreSQL TCP Streams).
+---
+
+## Design Principles
+
+- No inbound firewall ports
+- TLS encrypted communication
+- Secure routing through Cloudflare Tunnel
+- Private access to infrastructure services
+- Separation between Internet-facing and internal services
+- Least-privilege service accounts
 
 ---
 
-## ⚙️ Service Ingress Blueprint
+## Example Services
 
-Traffic entering the `explae.com` zone is parsed and securely targeted according to this blueprint:
+| Service | Example Hostname | Local Port |
+|---------|------------------|-----------:|
+| Coder | coder.example.com | 3000 |
+| MinIO API | minio.example.com | 9000 |
+| MinIO Console | console-minio.example.com | 9001 |
+| MLflow | mlflow.example.com | 5000 |
+| PostgreSQL | sql.example.com | 5432 |
 
-| Subdomain Address | Target Service Interface | Service Port | Traffic Protocol |
-| :--- | :--- | :--- | :--- |
-| `coder.explae.com` | Coder IDE Cloud Instance | `3000` | HTTP |
-| `minio.explae.com` | MinIO Storage API Endpoint | `9000` | HTTP / S3 API |
-| `console-minio.explae.com` | MinIO Web Storage Browser | `9001` | HTTP |
-| `mlflow.explae.com` | MLflow Central MLOps Dashboard | `5000` | HTTP |
-| `sql.explae.com` | PostgreSQL Database Instance | `5432` | TCP Stream |
-
----
-
-## 🚀 Step-by-Step Edge Setup (Fedora Linux)
-
-### 1. System Directories & Security Boundary
-The daemon architecture runs as an isolated system runtime tool with configuration states centralized under `/etc/cloudflared`.
-
-#### Operational Paths:
-* **Binary Link:** `/usr/bin/cloudflared`
-* **Configuration Blueprint:** `/etc/cloudflared/config.yml`
-* **Identity Token:** `/etc/cloudflared/cert.pem`
-* **Systemd Controller:** `/etc/systemd/system/cloudflared.service`
+Replace `example.com` with your own domain.
 
 ---
 
-### 2. Binary Installation & Authentication
-Install the official Cloudflare stable engine binary natively via the command line:
+## Install Cloudflared
 
 ```bash
-# Download the native cloudflared RPM release package
 wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-x86_64.rpm
 
-# Install via DNF package manager
 sudo dnf install -y ./cloudflared-linux-x86_64.rpm
 
-# Authorize your local terminal to manage your cloud infrastructure profile
 cloudflared tunnel login
 ```
-*(Follow the browser terminal link prompt to grant control permissions for the `explae.com` zone).*
 
 ---
 
-### 3. Creating the Persistent Edge Tunnel
-Provision a dedicated secure connection path for your server cluster:
+## Create a Tunnel
 
 ```bash
-# Generate the named enterprise tunnel link
-cloudflared tunnel create terrafox-edge-tunnel
+cloudflared tunnel create enterprise-edge
 ```
-*Note the returned **Tunnel UUID** string and the matching `.json` credential key file generated inside your path.*
+
+Record the generated Tunnel UUID.
 
 ---
 
-### 4. Configuration Blueprint Management
-Build your centralized multi-service application router map:
+## Example Configuration
+
+Create or edit:
 
 ```bash
 sudo nano /etc/cloudflared/config.yml
 ```
 
-#### Contents:
+Example:
+
 ```yaml
-tunnel: <YOUR-TUNNEL-UUID-HERE>
-credentials-file: /etc/cloudflared/<YOUR-TUNNEL-UUID-HERE>.json
+tunnel: <YOUR-TUNNEL-UUID>
+credentials-file: /etc/cloudflared/<YOUR-TUNNEL-UUID>.json
 
 ingress:
-  - hostname: coder.explae.com
+  - hostname: coder.example.com
     service: http://localhost:3000
 
-  - hostname: minio.explae.com
+  - hostname: minio.example.com
     service: http://localhost:9000
 
-  - hostname: console-minio.explae.com
+  - hostname: console-minio.example.com
     service: http://localhost:9001
 
-  - hostname: mlflow.explae.com
+  - hostname: mlflow.example.com
     service: http://localhost:5000
 
-  - hostname: sql.explae.com
+  - hostname: sql.example.com
     service: tcp://localhost:5432
 
-  # Global fallback catch-all configuration
   - service: http_status:404
 ```
 
 ---
 
-## 5. Systemd Service Registration & Control
-Lock `cloudflared` into your Fedora system backend daemon manager to guarantee persistent connection streams across system reboots:
+## Register Cloudflared as a System Service
 
 ```bash
-# Generate the formal background daemon configuration setup profiles
 sudo cloudflared service install
 
-# Refresh configuration dependencies
 sudo systemctl daemon-reload
 
-# Configure the runtime daemon to activate on host system boot
 sudo systemctl enable cloudflared
 
-# Control running processes
 sudo systemctl start cloudflared
-sudo systemctl restart cloudflared
 
-# Check real-time process integrity status
 sudo systemctl status cloudflared
 ```
 
 ---
 
-## 6. Cloudflare Routing Table Mapping
-Map your local subdomains to the edge proxy by adding CNAME records to your global zone DNS table:
+## Create DNS Routes
 
 ```bash
-# Sync web UI routes to edge networks
-cloudflared tunnel route dns terrafox-edge-tunnel coder.explae.com
-cloudflared tunnel route dns terrafox-edge-tunnel minio.explae.com
-cloudflared tunnel route dns terrafox-edge-tunnel console-minio.explae.com
-cloudflared tunnel route dns terrafox-edge-tunnel mlflow.explae.com
-cloudflared tunnel route dns terrafox-edge-tunnel sql.explae.com
+cloudflared tunnel route dns enterprise-edge coder.example.com
+cloudflared tunnel route dns enterprise-edge minio.example.com
+cloudflared tunnel route dns enterprise-edge console-minio.example.com
+cloudflared tunnel route dns enterprise-edge mlflow.example.com
+cloudflared tunnel route dns enterprise-edge sql.example.com
 ```
 
 ---
 
-## 🔒 Verification & External Connectivity
+## Security Practices
 
-### Verifying Web Interfaces
-Open an outside web browser and clear your authorization checkpoints to log right into your apps:
-* `https://coder.explae.com`
-* `https://console-minio.explae.com`
-* `https://mlflow.explae.com`
+This implementation demonstrates several security practices commonly used in enterprise environments:
 
-### Verifying Database TCP Streams (`sql.explae.com`)
-Because raw SQL database traffic cannot be processed directly by web browsers, access the data channel using either option below:
+- Cloudflare Tunnel instead of public port forwarding
+- HTTPS/TLS encrypted communication
+- Private service routing
+- Dedicated service accounts
+- Least-privilege Linux permissions
+- Infrastructure services isolated behind a single ingress layer
 
-#### Method A: Cloudflare Access Routing Companion (CLI)
-From any remote computer or external client workspace terminal, map the domain back to a vacant local port:
-```bash
-cloudflared access tcp --hostname sql.explae.com --url localhost:5432
-```
-*Leave this running and point your IDE database navigator directly to `localhost:5432`.*
+This repository is intended as a learning and reference implementation rather than a production deployment guide.
 
-#### Method B: Built-in Desktop App SSH Tunneling
-Open your database client tools (like **DBeaver** or **pgAdmin 4**) and bypass the edge proxy entirely by using the built-in **SSH Tunnel** tab. Route your connection directly to your Fedora system profile over local IP address configurations.
+---
+
+## Verification
+
+Open the following URLs after deployment:
+
+- https://coder.example.com
+- https://console-minio.example.com
+- https://mlflow.example.com
+
+For PostgreSQL, use Cloudflare Access TCP routing or an SSH tunnel depending on the environment.
+
+---
+
+## Related Projects
+
+- Private MinIO Data Lake
+- Python Data Lake SDK
+- MLflow Tracking Server
+- Enterprise AI Lab
