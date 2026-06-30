@@ -8,6 +8,8 @@ This project demonstrates security principles commonly used in enterprise enviro
 
 ---
 
+![Cloudflare Dashboard](cloudflare/cloudflare.jpg)
+
 ## Architecture Overview
 
 ```text
@@ -55,13 +57,13 @@ This approach helps keep the server private while still allowing controlled acce
 
 ## Example Services
 
-| Service | Example Hostname | Local Port | Purpose |
-|---------|------------------|-----------:|---------|
-| Coder | coder.example.com | 3000 | Cloud development workspace |
-| MinIO API | minio.example.com | 9000 | S3-compatible object storage API |
-| MinIO Console | console-minio.example.com | 9001 | MinIO web console |
-| MLflow | mlflow.example.com | 5000 | ML experiment tracking |
-| PostgreSQL | sql.example.com | 5432 | Database access |
+| Service       | Example Hostname          | Local Port | Purpose                          |
+| ------------- | ------------------------- | ---------: | -------------------------------- |
+| Coder         | coder.example.com         |       3000 | Cloud development workspace      |
+| MinIO API     | minio.example.com         |       9000 | S3-compatible object storage API |
+| MinIO Console | console-minio.example.com |       9001 | MinIO web console                |
+| MLflow        | mlflow.example.com        |       5000 | ML experiment tracking           |
+| PostgreSQL    | sql.example.com           |       5432 | Database access                  |
 
 Replace `example.com` with your own domain.
 
