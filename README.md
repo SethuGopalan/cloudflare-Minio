@@ -26,7 +26,7 @@ The ingress layer establishes a persistent outbound proxy connection to Cloudfla
                                    │
                      ┌─────────────┴─────────────┐
                      │   Cloudflare Edge Network │
-                     │  (*.terrafoxai.com Zone)  │
+                     │    (*.explae.com Zone)    │
                      └───────────────────────────┘
 ```
 
@@ -38,15 +38,15 @@ The ingress layer establishes a persistent outbound proxy connection to Cloudfla
 
 ## ⚙️ Service Ingress Blueprint
 
-Traffic entering the `terrafoxai.com` zone is parsed and securely targeted according to this blueprint:
+Traffic entering the `explae.com` zone is parsed and securely targeted according to this blueprint:
 
 | Subdomain Address | Target Service Interface | Service Port | Traffic Protocol |
 | :--- | :--- | :--- | :--- |
-| `coder.terrafoxai.com` | Coder IDE Cloud Instance | `3000` | HTTP |
-| `minio.terrafoxai.com` | MinIO Storage API Endpoint | `9000` | HTTP / S3 API |
-| `console-minio.terrafoxai.com` | MinIO Web Storage Browser | `9001` | HTTP |
-| `mlflow.terrafoxai.com` | MLflow Central MLOps Dashboard | `5000` | HTTP |
-| `sql.terrafoxai.com` | PostgreSQL Database Instance | `5432` | TCP Stream |
+| `coder.explae.com` | Coder IDE Cloud Instance | `3000` | HTTP |
+| `minio.explae.com` | MinIO Storage API Endpoint | `9000` | HTTP / S3 API |
+| `console-minio.explae.com` | MinIO Web Storage Browser | `9001` | HTTP |
+| `mlflow.explae.com` | MLflow Central MLOps Dashboard | `5000` | HTTP |
+| `sql.explae.com` | PostgreSQL Database Instance | `5432` | TCP Stream |
 
 ---
 
@@ -76,7 +76,7 @@ sudo dnf install -y ./cloudflared-linux-x86_64.rpm
 # Authorize your local terminal to manage your cloud infrastructure profile
 cloudflared tunnel login
 ```
-*(Follow the browser terminal link prompt to grant control permissions for the `terrafoxai.com` zone).*
+*(Follow the browser terminal link prompt to grant control permissions for the `explae.com` zone).*
 
 ---
 
@@ -104,19 +104,19 @@ tunnel: <YOUR-TUNNEL-UUID-HERE>
 credentials-file: /etc/cloudflared/<YOUR-TUNNEL-UUID-HERE>.json
 
 ingress:
-  - hostname: coder.terrafoxai.com
+  - hostname: coder.explae.com
     service: http://localhost:3000
 
-  - hostname: minio.terrafoxai.com
+  - hostname: minio.explae.com
     service: http://localhost:9000
 
-  - hostname: console-minio.terrafoxai.com
+  - hostname: console-minio.explae.com
     service: http://localhost:9001
 
-  - hostname: mlflow.terrafoxai.com
+  - hostname: mlflow.explae.com
     service: http://localhost:5000
 
-  - hostname: sql.terrafoxai.com
+  - hostname: sql.explae.com
     service: tcp://localhost:5432
 
   # Global fallback catch-all configuration
@@ -153,11 +153,11 @@ Map your local subdomains to the edge proxy by adding CNAME records to your glob
 
 ```bash
 # Sync web UI routes to edge networks
-cloudflared tunnel route dns terrafox-edge-tunnel coder.terrafoxai.com
-cloudflared tunnel route dns terrafox-edge-tunnel minio.terrafoxai.com
-cloudflared tunnel route dns terrafox-edge-tunnel console-minio.terrafoxai.com
-cloudflared tunnel route dns terrafox-edge-tunnel mlflow.terrafoxai.com
-cloudflared tunnel route dns terrafox-edge-tunnel sql.terrafoxai.com
+cloudflared tunnel route dns terrafox-edge-tunnel coder.explae.com
+cloudflared tunnel route dns terrafox-edge-tunnel minio.explae.com
+cloudflared tunnel route dns terrafox-edge-tunnel console-minio.explae.com
+cloudflared tunnel route dns terrafox-edge-tunnel mlflow.explae.com
+cloudflared tunnel route dns terrafox-edge-tunnel sql.explae.com
 ```
 
 ---
@@ -166,19 +166,19 @@ cloudflared tunnel route dns terrafox-edge-tunnel sql.terrafoxai.com
 
 ### Verifying Web Interfaces
 Open an outside web browser and clear your authorization checkpoints to log right into your apps:
-* `https://coder.terrafoxai.com`
-* `https://console-minio.terrafoxai.com`
-* `https://mlflow.terrafoxai.com`
+* `https://coder.explae.com`
+* `https://console-minio.explae.com`
+* `https://mlflow.explae.com`
 
-### Verifying Database TCP Streams (`sql.terrafoxai.com`)
+### Verifying Database TCP Streams (`sql.explae.com`)
 Because raw SQL database traffic cannot be processed directly by web browsers, access the data channel using either option below:
 
 #### Method A: Cloudflare Access Routing Companion (CLI)
 From any remote computer or external client workspace terminal, map the domain back to a vacant local port:
 ```bash
-cloudflared access tcp --hostname sql.terrafoxai.com --url localhost:5432
+cloudflared access tcp --hostname sql.explae.com --url localhost:5432
 ```
 *Leave this running and point your IDE database navigator directly to `localhost:5432`.*
 
 #### Method B: Built-in Desktop App SSH Tunneling
-Open your database client tools (like **DBeaver** or **pgAdmin 4**) and bypass the edge proxy entirely by using the built-in **SSH Tunnel** tab. Route your connection directly to your Fedora system profile (`sethugopalan`) over local IP address configurations.
+Open your database client tools (like **DBeaver** or **pgAdmin 4**) and bypass the edge proxy entirely by using the built-in **SSH Tunnel** tab. Route your connection directly to your Fedora system profile over local IP address configurations.
